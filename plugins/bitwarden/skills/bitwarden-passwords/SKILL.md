@@ -24,7 +24,8 @@ For any question like:
 2. Call `find_logins` with the user's words as `query` (for example `aon intelligence`).
 3. Reply with the **exact** `name` values from `matches` (username, URI host, and folder are ok to show).
 4. **Stop.** Do not call `place_*`, `copy_to_clipboard`, or `pipe_to_command` unless the user asked to put the password somewhere.
-5. If `count` is 0, say no logins matched. If `count` is greater than 1 and they later ask to place a password, list every exact name and ask which one. Never guess.
+5. If `count` is 0, say no logins matched.
+6. If `count` is greater than 1 and they asked to place or copy a password, **do not list bullets in chat**. Open a **single-choice radio picker** (Cursor `AskQuestion`; `allow_multiple` false). One option per match. Label: exact name — username — URI host — folder. Option `id`: the exact `name`, or the match `id` if two names are the same. Wait for the selection. Never guess. If that widget is unavailable, then list every exact name and ask.
 
 `find_logins` searches only **name, username, URI host, and folder**. It never returns passwords, TOTP, notes, or field values.
 

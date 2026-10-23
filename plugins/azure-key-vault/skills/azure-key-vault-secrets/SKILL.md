@@ -29,4 +29,4 @@ The agent only handles **names and references**. Values stay inside the plugin.
 - Run `az keyvault secret show`
 - Read destination files
 - Print, quote, or paraphrase a secret value
-- Guess among multiple name matches — ask
+- Guess among multiple name matches. Use a **single-choice radio picker** (Cursor `AskQuestion`) with each exact secret name; if that widget is unavailable, ask in chat.
