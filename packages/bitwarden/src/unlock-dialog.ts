@@ -3,7 +3,8 @@ import { wipeBuffer } from "../../core/src/spawn.ts";
 
 export async function promptMasterPassword(): Promise<string> {
   if (process.platform === "darwin") {
-    const script = `Tell application "System Events" to display dialog "Unlock Bitwarden for Cursor" default answer "" with hidden answer with title "Bitwarden"`;
+    const script =
+      'tell application "System Events" to display dialog "Enter your Bitwarden master password to unlock the vault." default answer "" with hidden answer with title "Bitwarden master password" buttons {"Cancel", "Unlock"} default button "Unlock"';
     const result = await spawnCapture("osascript", ["-e", script]);
     if (result.code !== 0) throw new Error("Unlock cancelled.");
     const text = result.stdout.toString("utf8");
@@ -15,8 +16,8 @@ export async function promptMasterPassword(): Promise<string> {
   }
   if (process.platform === "linux") {
     for (const [cmd, args] of [
-      ["zenity", ["--password", "--title=Unlock Bitwarden"]],
-      ["kdialog", ["--password", "Unlock Bitwarden"]],
+      ["zenity", ["--password", "--title=Bitwarden master password", "--text=Enter your Bitwarden master password to unlock the vault."]],
+      ["kdialog", ["--title", "Bitwarden master password", "--password", "Enter your Bitwarden master password to unlock the vault."]],
     ] as Array<[string, string[]]>) {
       const result = await spawnCapture(cmd, args);
       if (result.code === 0) {

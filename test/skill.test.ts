@@ -16,5 +16,7 @@ test("skill documents search-only find_logins workflow", () => {
   assert.match(skill, /exact/i);
   assert.match(skill, /Do not call `place_\*`/);
   assert.match(skill, /Never guess/);
+  assert.match(skill, /radio picker/);
+  assert.match(skill, /AskQuestion/);
   assert.match(skill, /bw get password/);
 });
