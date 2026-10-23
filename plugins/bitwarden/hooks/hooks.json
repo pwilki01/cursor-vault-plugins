@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "hooks": {
+    "preToolUse": [
+      {
+        "command": "./bin/shell-guard",
+        "matcher": "Shell"
+      }
+    ],
+    "beforeReadFile": [
+      {
+        "command": "./bin/read-guard"
+      }
+    ],
+    "beforeTabFileRead": [
+      {
+        "command": "./bin/read-guard"
+      }
+    ],
+    "beforeMCPExecution": [
+      {
+        "command": "./bin/mcp-guard"
+      }
+    ]
+  }
+}

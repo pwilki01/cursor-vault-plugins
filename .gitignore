@@ -1,0 +1,11 @@
+.DS_Store
+node_modules/
+*.log
+.env
+.env.*
+!.env.example
+coverage/
+.vscode/
+*.vsix
+tmp/
+.cursor/secret-placements.json

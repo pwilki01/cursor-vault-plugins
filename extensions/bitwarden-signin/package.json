@@ -1,0 +1,16 @@
+{
+  "name": "bitwarden-signin",
+  "displayName": "Bitwarden sign-in for Cursor",
+  "description": "Opens a transient Cursor terminal for Bitwarden CLI login. Not affiliated with Bitwarden, Inc.",
+  "version": "1.0.0",
+  "publisher": "cursor-vault-plugins",
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": ["Other"],
+  "activationEvents": ["onUri"],
+  "main": "./extension.js",
+  "contributes": {
+    "uriHandlers": []
+  }
+}

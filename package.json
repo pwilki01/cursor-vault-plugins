@@ -1,0 +1,26 @@
+{
+  "name": "cursor-vault-plugins",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Cursor plugins for placing Bitwarden and Azure Key Vault secrets without exposing values to the agent.",
+  "workspaces": [
+    "packages/core",
+    "packages/bitwarden",
+    "packages/azure-key-vault"
+  ],
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "validate": "node scripts/validate.mjs",
+    "test": "node --test --experimental-strip-types --test-reporter=spec test/find-logins.test.ts test/canary-leak.test.ts test/core.test.ts test/extension-nonce.test.ts test/mcp-canary.test.ts test/skill.test.ts"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "@modelcontextprotocol/sdk": "^1.18.2",
+    "esbuild": "^0.25.9",
+    "zod": "^3.24.2"
+  }
+}

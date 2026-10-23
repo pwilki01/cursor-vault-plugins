@@ -1,0 +1,21 @@
+{
+  "name": "cursor-vault-plugins",
+  "owner": {
+    "name": "cursor-vault-plugins"
+  },
+  "metadata": {
+    "description": "Place Bitwarden and Azure Key Vault secrets without exposing values to the agent."
+  },
+  "plugins": [
+    {
+      "name": "bitwarden",
+      "source": "plugins/bitwarden",
+      "description": "Search Bitwarden logins by name and place passwords into destinations without putting values in chat."
+    },
+    {
+      "name": "azure-key-vault",
+      "source": "plugins/azure-key-vault",
+      "description": "Find Azure Key Vault secrets by name and place values into destinations without putting them in chat."
+    }
+  ]
+}
