@@ -1,0 +1,24 @@
+{
+  "name": "bitwarden",
+  "displayName": "Bitwarden",
+  "version": "1.0.0",
+  "description": "Unofficial Bitwarden plugin: search logins by name and place passwords into files, templates, the clipboard, or allowlisted commands without putting secret values in chat. Not affiliated with Bitwarden, Inc.",
+  "author": {
+    "name": "cursor-vault-plugins"
+  },
+  "homepage": "https://github.com/phillipwilkins/cursor-vault-plugins",
+  "repository": "https://github.com/phillipwilkins/cursor-vault-plugins",
+  "license": "MIT",
+  "keywords": [
+    "bitwarden",
+    "secrets",
+    "password",
+    "env",
+    "hooks",
+    "mcp"
+  ],
+  "logo": "assets/logo.svg",
+  "hooks": "./hooks/hooks.json",
+  "skills": "./skills/",
+  "mcpServers": "./mcp.json"
+}

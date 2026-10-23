@@ -1,0 +1,15 @@
+{
+  "name": "azure-key-vault",
+  "displayName": "Azure Key Vault",
+  "version": "1.0.0",
+  "description": "Unofficial Azure Key Vault plugin: find secrets by name and place values into destinations without putting them in chat. Not affiliated with Microsoft.",
+  "author": {
+    "name": "cursor-vault-plugins"
+  },
+  "license": "MIT",
+  "keywords": ["azure", "key-vault", "secrets", "mcp", "hooks"],
+  "logo": "assets/logo.svg",
+  "hooks": "./hooks/hooks.json",
+  "skills": "./skills/",
+  "mcpServers": "./mcp.json"
+}
