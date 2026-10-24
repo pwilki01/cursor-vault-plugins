@@ -4,7 +4,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { test } from "node:test";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 const CANARY = "CANARY_PASSWORD";
 const dir = path.dirname(fileURLToPath(import.meta.url));
@@ -13,7 +13,7 @@ const stub = path.join(dir, "fixtures", "bw-stub.mjs");
 test("provider find_logins over stub omits canary from serialized MCP-style payload", async () => {
   const workspace = fs.mkdtempSync(path.join(os.tmpdir(), "vault-mcp-"));
   const script = `
-    import { BitwardenProvider } from ${JSON.stringify(path.join(dir, "../packages/bitwarden/src/provider.ts"))};
+    import { BitwardenProvider } from ${JSON.stringify(pathToFileURL(path.join(dir, "../packages/bitwarden/src/provider.ts")).href)};
     process.env.BW_CLI_PATH = ${JSON.stringify(stub)};
     process.env.BW_SESSION = "test-session";
     const p = new BitwardenProvider([${JSON.stringify(workspace)}]);
