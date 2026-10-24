@@ -11,7 +11,7 @@ const skill = fs.readFileSync(
 
 test("skill documents search-only find_logins workflow", () => {
   assert.match(skill, /find_logins/);
-  assert.match(skill, /aon intelligence/);
+  assert.match(skill, /acme corp/);
   assert.match(skill, /\*\*Stop\.\*\*/);
   assert.match(skill, /exact/i);
   assert.match(skill, /Do not call `place_\*`/);

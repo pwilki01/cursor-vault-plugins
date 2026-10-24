@@ -27,22 +27,44 @@ function loadProjectConfig(workspaceRoot) {
 
 // packages/core/src/hook-io.ts
 import { stdin } from "node:process";
-async function readStdinJson() {
+async function readStdinText() {
   const chunks = [];
   for await (const chunk of stdin) chunks.push(chunk);
-  const raw = Buffer.concat(chunks).toString("utf8").trim();
-  if (!raw) return {};
-  return JSON.parse(raw);
+  return Buffer.concat(chunks).toString("utf8").trim();
+}
+function commandFrom(input) {
+  if (typeof input.command === "string") return input.command;
+  const tool = input.tool_input;
+  return typeof tool?.command === "string" ? tool.command : "";
 }
 function writeHookDecision(decision) {
   process.stdout.write(`${JSON.stringify(decision)}
 `);
 }
-function workspaceRootsFrom(input2) {
-  const roots = input2.workspace_roots;
+function workspaceRootsFrom(input) {
+  const roots = input.workspace_roots;
   if (Array.isArray(roots)) return roots.map(String);
-  const cwd = input2.cwd ?? input2.tool_input?.working_directory;
+  const cwd = input.cwd ?? input.tool_input?.working_directory;
   return cwd ? [String(cwd)] : [];
+}
+
+// packages/core/src/command-guard.ts
+function normalizeCommand(command2) {
+  return command2.replace(/\\\r?\n/g, "").replace(/\$\{(\w+)\}/g, "$$$1").replace(/['"`\\]/g, "").replace(/\s+/g, " ").toLowerCase().trim();
+}
+var AZ_WORD = /(?<![\w.-])az(\.cmd|\.exe)?(?![\w.-])/;
+function azureLeak(command2) {
+  const n = normalizeCommand(command2);
+  if (n.includes("vault.azure.net")) return "data-plane";
+  if (/\bget-access-token\b/.test(n) && /vault/.test(n)) return "vault-token";
+  if (AZ_WORD.test(n) && /\bkeyvault\b/.test(n) && /\bsecret\b/.test(n) && /\b(show|download|backup)\b/.test(n)) {
+    return "az-cli";
+  }
+  return null;
+}
+var VAULT_RELATED = /\bbw\b|bitwarden|bw_session|secret-plugins|keyvault|vault\.azure/i;
+function looksVaultRelated(text) {
+  return VAULT_RELATED.test(text) || VAULT_RELATED.test(normalizeCommand(text));
 }
 
 // packages/core/src/paths.ts
@@ -74,16 +96,18 @@ function placedPaths(workspaceRoot) {
 }
 
 // packages/azure-key-vault/src/hooks/shell-guard.ts
-var AZ_LEAK = /\baz(\.cmd|\.exe)?\s+keyvault\s+secret\s+(show|download|backup)\b/i;
 var READ_CMDS = /\b(cat|head|tail|less|more|grep|rg|sed|awk|source|\.|base64|cp)\b/i;
-var input = await readStdinJson();
+var raw = await readStdinText();
+var command = "";
 try {
-  const command = String(input.command ?? input.tool_input?.command ?? "");
+  const input = raw ? JSON.parse(raw) : {};
+  command = commandFrom(input);
   const root = workspaceRootsFrom(input)[0] ?? process.cwd();
-  if (AZ_LEAK.test(command)) {
+  const leak = azureLeak(command);
+  if (leak) {
     writeHookDecision({
       permission: "deny",
-      agent_message: "Do not use az keyvault secret show/download/backup. Call find_secrets or the placement tools."
+      agent_message: leak === "az-cli" ? "Do not use az keyvault secret show/download/backup. Call find_secrets or the placement tools." : "Do not call the Key Vault data plane or mint Key Vault tokens directly. Call find_secrets or the placement tools."
     });
     process.exit(0);
   }
@@ -99,7 +123,10 @@ try {
       process.exit(0);
     }
   }
+  writeHookDecision({ permission: "allow" });
 } catch {
+  writeHookDecision(
+    looksVaultRelated(command || raw) ? { permission: "deny", agent_message: "The Key Vault guard could not check this command, so it was blocked." } : { permission: "allow" }
+  );
 }
-writeHookDecision({ permission: "allow" });
 process.exit(0);

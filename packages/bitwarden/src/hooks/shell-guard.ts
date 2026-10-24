@@ -1,24 +1,16 @@
 import path from "node:path";
 import { loadProjectConfig, defaultWrapMode } from "../../../core/src/config.ts";
-import { readStdinJson, writeHookDecision, workspaceRootsFrom } from "../../../core/src/hook-io.ts";
+import { commandFrom, readStdinText, writeHookDecision, workspaceRootsFrom } from "../../../core/src/hook-io.ts";
+import { bitwardenLeak, looksVaultRelated } from "../../../core/src/command-guard.ts";
 import { looksLikeEnvFile, isEnvException } from "../../../core/src/paths.ts";
 import { placedPaths } from "../../../core/src/placements.ts";
 import { SIGNIN_BANNER } from "../login-launch.ts";
 import { effectiveStatus } from "../session.ts";
 
-const BW_LEAK =
-  /\bbw(\.exe)?\s+(get\s+(password|totp|notes|item)|list\s+items|export|unlock\b|login\b)/i;
-
 const READ_CMDS = /\b(cat|head|tail|less|more|grep|rg|sed|awk|source|\.|base64|cp|type|Get-Content)\b/i;
 const ENV_DUMP = /\b(env|printenv|export\s+-p)\b/;
 const PBPASTE = /\bpbpaste\b/;
 const TERMINALS_DIR = /[\\/]\.cursor[\\/]projects[\\/].*[\\/]terminals[\\/]/i;
-
-function commandOf(input: Record<string, unknown>): string {
-  if (typeof input.command === "string") return input.command;
-  const tool = input.tool_input as { command?: string } | undefined;
-  return tool?.command ?? "";
-}
 
 function deny(agent: string, user?: string) {
   writeHookDecision({
@@ -32,19 +24,27 @@ function allow(extra?: { updated_input?: Record<string, unknown> }) {
   writeHookDecision({ permission: "allow", ...extra });
 }
 
-const input = await readStdinJson<Record<string, unknown>>();
+const raw = await readStdinText();
+let command = "";
 try {
-  const command = commandOf(input);
+  const input = (raw ? JSON.parse(raw) : {}) as Record<string, unknown>;
+  command = commandFrom(input);
   const roots = workspaceRootsFrom(input);
   const root = roots[0] ?? process.cwd();
-  const config = loadProjectConfig(root);
 
-  if (BW_LEAK.test(command)) {
+  const leak = bitwardenLeak(command);
+  if (leak === "bw-cli") {
     deny(
       "Do not use the Bitwarden CLI to read secrets. Call find_logins for names, or place_in_dotenv / copy_to_clipboard / pipe_to_command / render_template to place a value.",
     );
     process.exit(0);
   }
+  if (leak) {
+    deny("Do not read the Bitwarden session key or the plugin's credential storage.");
+    process.exit(0);
+  }
+
+  const config = loadProjectConfig(root);
 
   if (TERMINALS_DIR.test(command) || command.includes(SIGNIN_BANNER)) {
     deny("Do not read Cursor terminal transcripts during Bitwarden sign-in.");
@@ -98,6 +98,10 @@ try {
 
   allow();
 } catch {
-  allow();
+  if (looksVaultRelated(command || raw)) {
+    deny("The Bitwarden guard could not check this command, so it was blocked.");
+  } else {
+    allow();
+  }
 }
 process.exit(0);

@@ -55,9 +55,9 @@ async function findWithStub(query: string) {
 }
 
 test("find_logins with stub returns exact name and no canary", async () => {
-  const { result, logs, json } = await findWithStub("aon intelligence");
+  const { result, logs, json } = await findWithStub("acme corp");
   assert.equal(result.count, 1);
-  assert.equal(result.matches[0].name, "Aon Intelligence CRM");
+  assert.equal(result.matches[0].name, "Acme Corp CRM");
   assert.equal(json.includes(CANARY), false);
   assert.equal(logs.includes(CANARY), false);
 });

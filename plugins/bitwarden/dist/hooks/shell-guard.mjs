@@ -49,22 +49,45 @@ function readAutolockMinutes() {
 
 // packages/core/src/hook-io.ts
 import { stdin } from "node:process";
-async function readStdinJson() {
+async function readStdinText() {
   const chunks = [];
   for await (const chunk of stdin) chunks.push(chunk);
-  const raw = Buffer.concat(chunks).toString("utf8").trim();
-  if (!raw) return {};
-  return JSON.parse(raw);
+  return Buffer.concat(chunks).toString("utf8").trim();
+}
+function commandFrom(input) {
+  if (typeof input.command === "string") return input.command;
+  const tool = input.tool_input;
+  return typeof tool?.command === "string" ? tool.command : "";
 }
 function writeHookDecision(decision) {
   process.stdout.write(`${JSON.stringify(decision)}
 `);
 }
-function workspaceRootsFrom(input2) {
-  const roots = input2.workspace_roots;
+function workspaceRootsFrom(input) {
+  const roots = input.workspace_roots;
   if (Array.isArray(roots)) return roots.map(String);
-  const cwd = input2.cwd ?? input2.tool_input?.working_directory;
+  const cwd = input.cwd ?? input.tool_input?.working_directory;
   return cwd ? [String(cwd)] : [];
+}
+
+// packages/core/src/command-guard.ts
+function normalizeCommand(command2) {
+  return command2.replace(/\\\r?\n/g, "").replace(/\$\{(\w+)\}/g, "$$$1").replace(/['"`\\]/g, "").replace(/\s+/g, " ").toLowerCase().trim();
+}
+var BW_WORD = /(?<![\w.-])bw(\.exe)?(?![\w.-])/;
+var BW_SENSITIVE = /\b(get (password|totp|notes|item|attachment|exposed)|list items|export|unlock|login|serve|send|receive)\b|(^|\s)--session\b/;
+var BW_ENV = /\bbw_(session|password|clientsecret)\b/;
+var BW_STORAGE = /bitwarden-cursor-plugin|secret-plugins|bitwarden cli|dump-keychain|secret-tool (lookup|search)/;
+function bitwardenLeak(command2) {
+  const n = normalizeCommand(command2);
+  if (BW_ENV.test(n)) return "session-env";
+  if (BW_STORAGE.test(n)) return "session-storage";
+  if (BW_WORD.test(n) && BW_SENSITIVE.test(n)) return "bw-cli";
+  return null;
+}
+var VAULT_RELATED = /\bbw\b|bitwarden|bw_session|secret-plugins|keyvault|vault\.azure/i;
+function looksVaultRelated(text) {
+  return VAULT_RELATED.test(text) || VAULT_RELATED.test(normalizeCommand(text));
 }
 
 // packages/core/src/paths.ts
@@ -72,9 +95,9 @@ import path3 from "node:path";
 
 // packages/core/src/spawn.ts
 import { spawn } from "node:child_process";
-function spawnCapture(command, args, options = {}) {
+function spawnCapture(command2, args, options = {}) {
   return new Promise((resolve, reject) => {
-    const child = spawn(command, args, {
+    const child = spawn(command2, args, {
       cwd: options.cwd,
       env: options.env ?? process.env,
       stdio: ["pipe", "pipe", "pipe"],
@@ -91,7 +114,7 @@ function spawnCapture(command, args, options = {}) {
     }
     const timer = options.timeoutMs != null ? setTimeout(() => {
       child.kill("SIGKILL");
-      reject(new Error(`${command} timed out`));
+      reject(new Error(`${command2} timed out`));
     }, options.timeoutMs) : null;
     child.on("error", (err) => {
       if (timer) clearTimeout(timer);
@@ -155,11 +178,11 @@ function bwCommand() {
 }
 async function bwRaw(args, env = process.env) {
   try {
-    const command = bwCommand();
-    if (command.endsWith(".mjs") || command.endsWith(".js") || command.endsWith(".ts")) {
-      return await spawnCapture(process.execPath, [command, ...args], { env, timeoutMs: 6e4 });
+    const command2 = bwCommand();
+    if (command2.endsWith(".mjs") || command2.endsWith(".js") || command2.endsWith(".ts")) {
+      return await spawnCapture(process.execPath, [command2, ...args], { env, timeoutMs: 6e4 });
     }
-    return await spawnCapture(command, args, { env, timeoutMs: 6e4 });
+    return await spawnCapture(command2, args, { env, timeoutMs: 6e4 });
   } catch (err) {
     if (err.code === "ENOENT") {
       const empty = Buffer.alloc(0);
@@ -292,16 +315,10 @@ async function effectiveStatus(clock) {
 }
 
 // packages/bitwarden/src/hooks/shell-guard.ts
-var BW_LEAK = /\bbw(\.exe)?\s+(get\s+(password|totp|notes|item)|list\s+items|export|unlock\b|login\b)/i;
 var READ_CMDS = /\b(cat|head|tail|less|more|grep|rg|sed|awk|source|\.|base64|cp|type|Get-Content)\b/i;
 var ENV_DUMP = /\b(env|printenv|export\s+-p)\b/;
 var PBPASTE = /\bpbpaste\b/;
 var TERMINALS_DIR = /[\\/]\.cursor[\\/]projects[\\/].*[\\/]terminals[\\/]/i;
-function commandOf(input2) {
-  if (typeof input2.command === "string") return input2.command;
-  const tool = input2.tool_input;
-  return tool?.command ?? "";
-}
 function deny(agent, user) {
   writeHookDecision({
     permission: "deny",
@@ -312,18 +329,25 @@ function deny(agent, user) {
 function allow(extra) {
   writeHookDecision({ permission: "allow", ...extra });
 }
-var input = await readStdinJson();
+var raw = await readStdinText();
+var command = "";
 try {
-  const command = commandOf(input);
+  const input = raw ? JSON.parse(raw) : {};
+  command = commandFrom(input);
   const roots = workspaceRootsFrom(input);
   const root = roots[0] ?? process.cwd();
-  const config = loadProjectConfig(root);
-  if (BW_LEAK.test(command)) {
+  const leak = bitwardenLeak(command);
+  if (leak === "bw-cli") {
     deny(
       "Do not use the Bitwarden CLI to read secrets. Call find_logins for names, or place_in_dotenv / copy_to_clipboard / pipe_to_command / render_template to place a value."
     );
     process.exit(0);
   }
+  if (leak) {
+    deny("Do not read the Bitwarden session key or the plugin's credential storage.");
+    process.exit(0);
+  }
+  const config = loadProjectConfig(root);
   if (TERMINALS_DIR.test(command) || command.includes(SIGNIN_BANNER)) {
     deny("Do not read Cursor terminal transcripts during Bitwarden sign-in.");
     process.exit(0);
@@ -369,6 +393,10 @@ try {
   }
   allow();
 } catch {
-  allow();
+  if (looksVaultRelated(command || raw)) {
+    deny("The Bitwarden guard could not check this command, so it was blocked.");
+  } else {
+    allow();
+  }
 }
 process.exit(0);
