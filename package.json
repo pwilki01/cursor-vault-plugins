@@ -12,7 +12,8 @@
   "scripts": {
     "build": "node scripts/build.mjs",
     "validate": "node scripts/validate.mjs",
-    "test": "node --test --experimental-strip-types --test-reporter=spec test/find-logins.test.ts test/canary-leak.test.ts test/core.test.ts test/extension-nonce.test.ts test/mcp-canary.test.ts test/skill.test.ts test/write-bin.test.ts test/guard-bypass.test.ts"
+    "test": "node --test --experimental-strip-types --test-reporter=spec test/find-logins.test.ts test/canary-leak.test.ts test/core.test.ts test/extension-nonce.test.ts test/mcp-canary.test.ts test/skill.test.ts test/write-bin.test.ts test/guard-bypass.test.ts",
+    "test:ci": "node --test --experimental-strip-types --test-reporter=spec --test-reporter-destination=stdout --test-reporter=./scripts/gh-test-reporter.mjs --test-reporter-destination=stdout test/find-logins.test.ts test/canary-leak.test.ts test/core.test.ts test/extension-nonce.test.ts test/mcp-canary.test.ts test/skill.test.ts test/write-bin.test.ts test/guard-bypass.test.ts"
   },
   "engines": {
     "node": ">=22"
