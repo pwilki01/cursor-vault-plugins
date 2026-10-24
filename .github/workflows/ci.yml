@@ -18,7 +18,7 @@ jobs:
           node-version: "22"
           cache: npm
       - run: npm ci
-      - run: npm test
+      - run: npm run test:ci
       - run: npm run build
       - run: npm run validate
       # Windows checkouts convert line endings, so compare the committed bundles on unix only.
