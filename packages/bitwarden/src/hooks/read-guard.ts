@@ -6,6 +6,8 @@ import { placedPaths } from "../../../core/src/placements.ts";
 import { loadProjectConfig } from "../../../core/src/config.ts";
 import { SIGNIN_BANNER } from "../login-launch.ts";
 
+const RAW_ENV_PATH = /[\\/"]\.env(?!\.(example|sample|template|dist)")(\.[\w-]+)?"/i;
+
 const raw = await readStdinText();
 let filePath = "";
 try {
@@ -38,7 +40,8 @@ try {
   writeHookDecision({ permission: "allow" });
 } catch {
   writeHookDecision(
-    looksLikeEnvFile(filePath) || isVaultStatePath(filePath) || looksVaultRelated(filePath)
+    looksLikeEnvFile(filePath) || isVaultStatePath(filePath) || looksVaultRelated(filePath || raw) || RAW_ENV_PATH.test(raw) ||
+    /[\\/]terminals[\\/]/.test(raw) || raw.includes(SIGNIN_BANNER)
       ? { permission: "deny", user_message: "The Bitwarden read guard could not check this file, so it was blocked." }
       : { permission: "allow" },
   );

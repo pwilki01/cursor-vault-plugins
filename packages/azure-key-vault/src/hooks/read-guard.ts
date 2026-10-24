@@ -5,6 +5,8 @@ import { looksLikeEnvFile } from "../../../core/src/paths.ts";
 import { placedPaths } from "../../../core/src/placements.ts";
 import { loadProjectConfig } from "../../../core/src/config.ts";
 
+const RAW_ENV_PATH = /[\\/"]\.env(?!\.(example|sample|template|dist)")(\.[\w-]+)?"/i;
+
 const raw = await readStdinText();
 let filePath = "";
 try {
@@ -25,7 +27,7 @@ try {
   writeHookDecision({ permission: "allow" });
 } catch {
   writeHookDecision(
-    looksLikeEnvFile(filePath) || isVaultStatePath(filePath) || looksVaultRelated(filePath)
+    looksLikeEnvFile(filePath) || isVaultStatePath(filePath) || looksVaultRelated(filePath || raw) || RAW_ENV_PATH.test(raw)
       ? { permission: "deny", user_message: "The Key Vault read guard could not check this file, so it was blocked." }
       : { permission: "allow" },
   );

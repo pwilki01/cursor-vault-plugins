@@ -87,6 +87,7 @@ function loadProjectConfig(workspaceRoot) {
 }
 
 // packages/azure-key-vault/src/hooks/read-guard.ts
+var RAW_ENV_PATH = /[\\/"]\.env(?!\.(example|sample|template|dist)")(\.[\w-]+)?"/i;
 var raw = await readStdinText();
 var filePath = "";
 try {
@@ -107,7 +108,7 @@ try {
   writeHookDecision({ permission: "allow" });
 } catch {
   writeHookDecision(
-    looksLikeEnvFile(filePath) || isVaultStatePath(filePath) || looksVaultRelated(filePath) ? { permission: "deny", user_message: "The Key Vault read guard could not check this file, so it was blocked." } : { permission: "allow" }
+    looksLikeEnvFile(filePath) || isVaultStatePath(filePath) || looksVaultRelated(filePath || raw) || RAW_ENV_PATH.test(raw) ? { permission: "deny", user_message: "The Key Vault read guard could not check this file, so it was blocked." } : { permission: "allow" }
   );
 }
 process.exit(0);

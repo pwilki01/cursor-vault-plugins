@@ -131,6 +131,32 @@ test("read guards block plugin credential storage", async () => {
   }
 });
 
+test("read guards fail closed on malformed input naming secret files", async () => {
+  const inputs = [
+    '{"file_path": "/Users/me/.cursor/secret-plugins/BW_SESSION.secret", broken',
+    '{"file_path": "/Users/me/Library/Application Support/Bitwarden CLI/data.json", broken',
+    '{"file_path": "/Users/me/project/.env", broken',
+    '{"file_path": "/Users/me/project/.env.local", broken',
+  ];
+  for (const hook of [hooks.bwRead, hooks.azRead]) {
+    for (const stdin of inputs) {
+      const out = await runHook(hook, stdin);
+      assert.equal(out.permission, "deny", `${hook} ${stdin}`);
+    }
+  }
+  const transcript = await runHook(hooks.bwRead, '{"file_path": "/Users/me/.cursor/projects/x/terminals/1.txt", broken');
+  assert.equal(transcript.permission, "deny");
+});
+
+test("read guards still allow malformed input naming ordinary files", async () => {
+  for (const hook of [hooks.bwRead, hooks.azRead]) {
+    for (const stdin of ['{"file_path": "/Users/me/project/README.md", broken', '{"file_path": "/Users/me/project/.env.example", broken']) {
+      const out = await runHook(hook, stdin);
+      assert.equal(out.permission, "allow", `${hook} ${stdin}`);
+    }
+  }
+});
+
 test("mcp guard fails closed on malformed vault-related input", async () => {
   const out = await runHook(hooks.bwMcp, '{"mcp_server_name": "bitwarden", broken');
   assert.equal(out.permission, "deny");
