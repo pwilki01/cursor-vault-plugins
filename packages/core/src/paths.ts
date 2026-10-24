@@ -15,7 +15,7 @@ export function looksLikeEnvFile(filePath: string): boolean {
 }
 
 export function resolveInsideWorkspace(workspaceRoots: string[], dest: string): string {
-  const resolved = fs.realpathSync.native ? tryRealpath(path.resolve(dest)) : path.resolve(dest);
+  const resolved = tryRealpath(path.resolve(dest));
   const normalized = path.normalize(resolved);
   if (normalized.includes("..")) {
     throw new Error("Destination path must not contain '..'.");
