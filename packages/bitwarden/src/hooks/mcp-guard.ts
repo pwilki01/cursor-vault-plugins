@@ -1,7 +1,9 @@
-import { readStdinJson, writeHookDecision } from "../../../core/src/hook-io.ts";
+import { readStdinText, writeHookDecision } from "../../../core/src/hook-io.ts";
+import { looksVaultRelated } from "../../../core/src/command-guard.ts";
 
-const input = await readStdinJson<Record<string, unknown>>();
+const raw = await readStdinText();
 try {
+  const input = (raw ? JSON.parse(raw) : {}) as Record<string, unknown>;
   const server = String(input.mcp_server_name ?? "");
   const tool = String(input.tool_name ?? "");
   const toolInput = String(input.tool_input ?? "");
@@ -34,8 +36,12 @@ try {
     });
     process.exit(0);
   }
+  writeHookDecision({ permission: "allow" });
 } catch {
-  /* fail open */
+  writeHookDecision(
+    looksVaultRelated(raw)
+      ? { permission: "deny", agent_message: "The Bitwarden MCP guard could not check this call, so it was blocked." }
+      : { permission: "allow" },
+  );
 }
-writeHookDecision({ permission: "allow" });
 process.exit(0);

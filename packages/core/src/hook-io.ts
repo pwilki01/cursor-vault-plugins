@@ -1,11 +1,21 @@
 import { stdin } from "node:process";
 
-export async function readStdinJson<T = Record<string, unknown>>(): Promise<T> {
+export async function readStdinText(): Promise<string> {
   const chunks: Buffer[] = [];
   for await (const chunk of stdin) chunks.push(chunk as Buffer);
-  const raw = Buffer.concat(chunks).toString("utf8").trim();
+  return Buffer.concat(chunks).toString("utf8").trim();
+}
+
+export async function readStdinJson<T = Record<string, unknown>>(): Promise<T> {
+  const raw = await readStdinText();
   if (!raw) return {} as T;
   return JSON.parse(raw) as T;
+}
+
+export function commandFrom(input: Record<string, unknown>): string {
+  if (typeof input.command === "string") return input.command;
+  const tool = input.tool_input as { command?: unknown } | undefined;
+  return typeof tool?.command === "string" ? tool.command : "";
 }
 
 export function writeHookDecision(decision: {

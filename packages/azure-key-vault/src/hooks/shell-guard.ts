@@ -1,20 +1,26 @@
 import path from "node:path";
 import { loadProjectConfig } from "../../../core/src/config.ts";
-import { readStdinJson, writeHookDecision, workspaceRootsFrom } from "../../../core/src/hook-io.ts";
+import { commandFrom, readStdinText, writeHookDecision, workspaceRootsFrom } from "../../../core/src/hook-io.ts";
+import { azureLeak, looksVaultRelated } from "../../../core/src/command-guard.ts";
 import { looksLikeEnvFile, isEnvException } from "../../../core/src/paths.ts";
 import { placedPaths } from "../../../core/src/placements.ts";
 
-const AZ_LEAK = /\baz(\.cmd|\.exe)?\s+keyvault\s+secret\s+(show|download|backup)\b/i;
 const READ_CMDS = /\b(cat|head|tail|less|more|grep|rg|sed|awk|source|\.|base64|cp)\b/i;
 
-const input = await readStdinJson<Record<string, unknown>>();
+const raw = await readStdinText();
+let command = "";
 try {
-  const command = String(input.command ?? (input.tool_input as { command?: string } | undefined)?.command ?? "");
+  const input = (raw ? JSON.parse(raw) : {}) as Record<string, unknown>;
+  command = commandFrom(input);
   const root = workspaceRootsFrom(input)[0] ?? process.cwd();
-  if (AZ_LEAK.test(command)) {
+  const leak = azureLeak(command);
+  if (leak) {
     writeHookDecision({
       permission: "deny",
-      agent_message: "Do not use az keyvault secret show/download/backup. Call find_secrets or the placement tools.",
+      agent_message:
+        leak === "az-cli"
+          ? "Do not use az keyvault secret show/download/backup. Call find_secrets or the placement tools."
+          : "Do not call the Key Vault data plane or mint Key Vault tokens directly. Call find_secrets or the placement tools.",
     });
     process.exit(0);
   }
@@ -30,8 +36,12 @@ try {
       process.exit(0);
     }
   }
+  writeHookDecision({ permission: "allow" });
 } catch {
-  /* fail open */
+  writeHookDecision(
+    looksVaultRelated(command || raw)
+      ? { permission: "deny", agent_message: "The Key Vault guard could not check this command, so it was blocked." }
+      : { permission: "allow" },
+  );
 }
-writeHookDecision({ permission: "allow" });
 process.exit(0);

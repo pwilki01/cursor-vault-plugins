@@ -1,13 +1,16 @@
 import path from "node:path";
-import { readStdinJson, writeHookDecision, workspaceRootsFrom } from "../../../core/src/hook-io.ts";
+import { readStdinText, writeHookDecision, workspaceRootsFrom } from "../../../core/src/hook-io.ts";
+import { isVaultStatePath, looksVaultRelated } from "../../../core/src/command-guard.ts";
 import { looksLikeEnvFile } from "../../../core/src/paths.ts";
 import { placedPaths } from "../../../core/src/placements.ts";
 import { loadProjectConfig } from "../../../core/src/config.ts";
 import { SIGNIN_BANNER } from "../login-launch.ts";
 
-const input = await readStdinJson<Record<string, unknown>>();
+const raw = await readStdinText();
+let filePath = "";
 try {
-  const filePath = String(input.file_path ?? "");
+  const input = (raw ? JSON.parse(raw) : {}) as Record<string, unknown>;
+  filePath = String(input.file_path ?? "");
   const content = String(input.content ?? "");
   const roots = workspaceRootsFrom(input);
   const root = roots[0] ?? process.cwd();
@@ -25,15 +28,19 @@ try {
     process.exit(0);
   }
 
-  if (guarded.has(path.resolve(filePath)) || looksLikeEnvFile(filePath)) {
+  if (guarded.has(path.resolve(filePath)) || looksLikeEnvFile(filePath) || isVaultStatePath(filePath)) {
     writeHookDecision({
       permission: "deny",
       user_message: "Blocked reading a file that holds placed Bitwarden secrets. Use find_logins for names.",
     });
     process.exit(0);
   }
+  writeHookDecision({ permission: "allow" });
 } catch {
-  /* fail open */
+  writeHookDecision(
+    looksLikeEnvFile(filePath) || isVaultStatePath(filePath) || looksVaultRelated(filePath)
+      ? { permission: "deny", user_message: "The Bitwarden read guard could not check this file, so it was blocked." }
+      : { permission: "allow" },
+  );
 }
-writeHookDecision({ permission: "allow" });
 process.exit(0);
