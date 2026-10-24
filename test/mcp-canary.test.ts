@@ -17,7 +17,7 @@ test("provider find_logins over stub omits canary from serialized MCP-style payl
     process.env.BW_CLI_PATH = ${JSON.stringify(stub)};
     process.env.BW_SESSION = "test-session";
     const p = new BitwardenProvider([${JSON.stringify(workspace)}]);
-    const result = await p.findLogins("aon intelligence");
+    const result = await p.findLogins("acme corp");
     process.stdout.write(JSON.stringify({ content: [{ type: "text", text: JSON.stringify(result) }] }));
   `;
   const file = path.join(workspace, "run.ts");
@@ -27,7 +27,7 @@ test("provider find_logins over stub omits canary from serialized MCP-style payl
   assert.equal(stderr.includes(CANARY), false);
   const payload = JSON.parse(stdout);
   const inner = JSON.parse(payload.content[0].text);
-  assert.equal(inner.matches[0].name, "Aon Intelligence CRM");
+  assert.equal(inner.matches[0].name, "Acme Corp CRM");
 });
 
 function runNode(file: string): Promise<{ stdout: string; stderr: string }> {

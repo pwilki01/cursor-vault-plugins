@@ -8,7 +8,7 @@ Not affiliated with Bitwarden, Inc. or Microsoft.
 
 Ask:
 
-> Tell me if there are any logins related to aon intelligence.
+> Tell me if there are any logins related to acme corp.
 
 The Bitwarden plugin calls `find_logins`. You get back **exact login names** (plus username, URI host, and folder). It searches only those fields — never password, TOTP, notes, or custom fields.
 

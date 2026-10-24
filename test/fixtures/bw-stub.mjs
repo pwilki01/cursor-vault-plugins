@@ -13,17 +13,17 @@ const folders = [
 
 const items = [
   {
-    id: "item-aon",
-    name: "Aon Intelligence CRM",
+    id: "item-acme",
+    name: "Acme Corp CRM",
     type: 1,
     folderId: "folder-1",
     revisionDate: "2026-01-01T00:00:00.000Z",
-    notes: "aon intelligence",
+    notes: "acme corp",
     login: {
-      username: "user@aon.com",
+      username: "user@acme.example",
       password: CANARY,
       totp: "otpauth://totp/CANARY",
-      uris: [{ uri: "https://crm.aonintelligence.example" }],
+      uris: [{ uri: "https://crm.acmecorp.example" }],
     },
     fields: [{ name: "recovery", value: CANARY, type: 1 }],
     passwordHistory: [{ password: CANARY }],
@@ -34,7 +34,7 @@ const items = [
     type: 1,
     folderId: "folder-2",
     revisionDate: "2026-02-01T00:00:00.000Z",
-    notes: "aon intelligence",
+    notes: "acme corp",
     login: {
       username: "nobody",
       password: CANARY,
@@ -43,7 +43,7 @@ const items = [
   },
   {
     id: "item-card",
-    name: "Aon Intelligence Card",
+    name: "Acme Corp Card",
     type: 3,
     folderId: "folder-1",
     notes: "",
