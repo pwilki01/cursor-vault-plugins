@@ -2,15 +2,51 @@ name: ci
 on:
   push:
   pull_request:
+permissions:
+  contents: read
 jobs:
   test:
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
-      - run: npm install
+          cache: npm
+      - run: npm ci
       - run: npm test
       - run: npm run build
       - run: npm run validate
+      # Windows checkouts convert line endings, so compare the committed bundles on unix only.
+      - name: Built plugins match source
+        if: runner.os != 'Windows'
+        run: |
+          if ! git diff --exit-code --stat -- plugins/; then
+            echo "::error::plugins/ is out of date. Run npm run build and commit the result."
+            exit 1
+          fi
+          untracked=$(git ls-files --others --exclude-standard -- plugins/)
+          if [ -n "$untracked" ]; then
+            echo "::error::npm run build created files that are not committed: $untracked"
+            exit 1
+          fi
+
+  secrets:
+    runs-on: ubuntu-latest
+    env:
+      GITLEAKS_VERSION: 8.21.2
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Install gitleaks
+        run: |
+          curl -sSfL "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" | tar xz gitleaks
+      - name: Scan history
+        run: ./gitleaks git --log-opts="--all" --redact -v .
+      - name: Scan working tree
+        run: ./gitleaks dir --redact -v .
