@@ -26,7 +26,9 @@ The agent only handles **names and references**. Values stay inside the plugin.
 ## Do not
 
 - Call Azure MCP tools that return secret values
-- Run `az keyvault secret show`
+- Run `az keyvault secret show`, `download`, or `backup`
+- Call `*.vault.azure.net` directly (`az rest`, `curl`) or mint a Key Vault token with `az account get-access-token`
+- Work around a blocked command (quoting, variables, scripts, encoding). If a hook blocks you, use the plugin tools or ask the user
 - Read destination files
 - Print, quote, or paraphrase a secret value
 - Guess among multiple name matches. Use a **single-choice radio picker** (Cursor `AskQuestion`) with each exact secret name; if that widget is unavailable, ask in chat.

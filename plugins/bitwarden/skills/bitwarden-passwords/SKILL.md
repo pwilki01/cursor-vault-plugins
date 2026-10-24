@@ -47,6 +47,8 @@ After placing, confirm using metadata only (path, key, login name). Never read t
 - Read destination files, `.env` (except `.example` / `.sample` / `.template`), or Cursor `terminals/` transcripts
 - Pass secret values as tool arguments
 - Run `bw get password`, `bw list items`, `bw export`, or any CLI that prints vault secrets
+- Read or pass `BW_SESSION`, query the OS keychain for it, or open `~/.cursor/secret-plugins/`
+- Work around a blocked command (quoting, variables, scripts, encoding). If a hook blocks you, use the plugin tools or ask the user
 - Write into git-tracked files
 - Type passwords with browser tools (use the clipboard)
 - Fetch a password just to "show the login"
