@@ -2,51 +2,64 @@ import { createRequire as __createRequire } from "node:module";
 const require = __createRequire(import.meta.url);
 
 // packages/azure-key-vault/src/hooks/read-guard.ts
-import path5 from "node:path";
+import path6 from "node:path";
 
 // packages/core/src/hook-io.ts
 import { stdin } from "node:process";
-async function readStdinJson() {
+async function readStdinText() {
   const chunks = [];
   for await (const chunk of stdin) chunks.push(chunk);
-  const raw = Buffer.concat(chunks).toString("utf8").trim();
-  if (!raw) return {};
-  return JSON.parse(raw);
+  return Buffer.concat(chunks).toString("utf8").trim();
 }
 function writeHookDecision(decision) {
   process.stdout.write(`${JSON.stringify(decision)}
 `);
 }
-function workspaceRootsFrom(input2) {
-  const roots = input2.workspace_roots;
+function workspaceRootsFrom(input) {
+  const roots = input.workspace_roots;
   if (Array.isArray(roots)) return roots.map(String);
-  const cwd = input2.cwd ?? input2.tool_input?.working_directory;
+  const cwd = input.cwd ?? input.tool_input?.working_directory;
   return cwd ? [String(cwd)] : [];
 }
 
-// packages/core/src/paths.ts
+// packages/core/src/command-guard.ts
 import path from "node:path";
-var ENV_EXCEPTIONS = /\.(example|sample|template|dist)$/i;
-function isEnvException(filePath) {
-  return ENV_EXCEPTIONS.test(path.basename(filePath));
+function normalizeCommand(command) {
+  return command.replace(/\\\r?\n/g, "").replace(/\$\{(\w+)\}/g, "$$$1").replace(/['"`\\]/g, "").replace(/\s+/g, " ").toLowerCase().trim();
 }
-function looksLikeEnvFile(filePath) {
-  const base = path.basename(filePath);
-  if (isEnvException(filePath)) return false;
+var VAULT_RELATED = /\bbw\b|bitwarden|bw_session|secret-plugins|keyvault|vault\.azure/i;
+function looksVaultRelated(text) {
+  return VAULT_RELATED.test(text) || VAULT_RELATED.test(normalizeCommand(text));
+}
+function isVaultStatePath(filePath2) {
+  if (!filePath2) return false;
+  const p = path.resolve(filePath2).split(path.sep).join("/").toLowerCase();
+  return p.includes("/.cursor/secret-plugins/") || p.endsWith("/.cursor/secret-plugins") || p.includes("/bitwarden cli/");
+}
+
+// packages/core/src/paths.ts
+import path2 from "node:path";
+var ENV_EXCEPTIONS = /\.(example|sample|template|dist)$/i;
+function isEnvException(filePath2) {
+  return ENV_EXCEPTIONS.test(path2.basename(filePath2));
+}
+function looksLikeEnvFile(filePath2) {
+  const base = path2.basename(filePath2);
+  if (isEnvException(filePath2)) return false;
   return base === ".env" || base.startsWith(".env.");
 }
 
 // packages/core/src/placements.ts
-import path3 from "node:path";
+import path4 from "node:path";
 
 // packages/core/src/home.ts
 import fs from "node:fs";
 import os from "node:os";
-import path2 from "node:path";
-var SECRET_PLUGINS_DIR = path2.join(os.homedir(), ".cursor", "secret-plugins");
-function readJsonFile(filePath, fallback) {
+import path3 from "node:path";
+var SECRET_PLUGINS_DIR = path3.join(os.homedir(), ".cursor", "secret-plugins");
+function readJsonFile(filePath2, fallback) {
   try {
-    return JSON.parse(fs.readFileSync(filePath, "utf8"));
+    return JSON.parse(fs.readFileSync(filePath2, "utf8"));
   } catch {
     return fallback;
   }
@@ -54,7 +67,7 @@ function readJsonFile(filePath, fallback) {
 
 // packages/core/src/placements.ts
 function manifestPath(workspaceRoot) {
-  return path3.join(workspaceRoot, ".cursor", "secret-placements.json");
+  return path4.join(workspaceRoot, ".cursor", "secret-placements.json");
 }
 function loadPlacements(workspaceRoot) {
   return readJsonFile(manifestPath(workspaceRoot), { placements: [] }).placements;
@@ -68,28 +81,34 @@ function placedPaths(workspaceRoot) {
 }
 
 // packages/core/src/config.ts
-import path4 from "node:path";
+import path5 from "node:path";
 function loadProjectConfig(workspaceRoot) {
-  return readJsonFile(path4.join(workspaceRoot, ".cursor", "secrets.json"), {});
+  return readJsonFile(path5.join(workspaceRoot, ".cursor", "secrets.json"), {});
 }
 
 // packages/azure-key-vault/src/hooks/read-guard.ts
-var input = await readStdinJson();
+var RAW_ENV_PATH = /[\\/"]\.env(?!\.(example|sample|template|dist)")(\.[\w-]+)?"/i;
+var raw = await readStdinText();
+var filePath = "";
 try {
-  const filePath = String(input.file_path ?? "");
+  const input = raw ? JSON.parse(raw) : {};
+  filePath = String(input.file_path ?? "");
   const root = workspaceRootsFrom(input)[0] ?? process.cwd();
   const guarded = /* @__PURE__ */ new Set([
-    ...placedPaths(root).map((p) => path5.resolve(p)),
-    ...(loadProjectConfig(root).env_files ?? []).map((p) => path5.resolve(root, p))
+    ...placedPaths(root).map((p) => path6.resolve(p)),
+    ...(loadProjectConfig(root).env_files ?? []).map((p) => path6.resolve(root, p))
   ]);
-  if (guarded.has(path5.resolve(filePath)) || looksLikeEnvFile(filePath)) {
+  if (guarded.has(path6.resolve(filePath)) || looksLikeEnvFile(filePath) || isVaultStatePath(filePath)) {
     writeHookDecision({
       permission: "deny",
       user_message: "Blocked reading a file that holds placed Key Vault secrets."
     });
     process.exit(0);
   }
+  writeHookDecision({ permission: "allow" });
 } catch {
+  writeHookDecision(
+    looksLikeEnvFile(filePath) || isVaultStatePath(filePath) || looksVaultRelated(filePath || raw) || RAW_ENV_PATH.test(raw) ? { permission: "deny", user_message: "The Key Vault read guard could not check this file, so it was blocked." } : { permission: "allow" }
+  );
 }
-writeHookDecision({ permission: "allow" });
 process.exit(0);

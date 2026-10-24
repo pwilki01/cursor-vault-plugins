@@ -3,7 +3,7 @@ name: bitwarden-passwords
 description: >-
   Search Bitwarden logins by name and place passwords into destinations without
   ever putting secret values in chat. Use when the user asks if a login exists,
-  wants logins related to a name (for example "aon intelligence"), or wants a
+  wants logins related to a name (for example "acme corp"), or wants a
   password written to .env, a template, the clipboard, a command, or a process
   environment.
 ---
@@ -16,12 +16,12 @@ The agent only handles **references and metadata**. Secret values stay inside th
 
 For any question like:
 
-- "are there logins related to aon intelligence?"
+- "are there logins related to acme corp?"
 - "is there a login for X / named X?"
 - "what is the exact login name for …?"
 
 1. Call `status`. If `unauthenticated`, call `login` then `wait_for_signin` until signed in. If `locked`, call `unlock`.
-2. Call `find_logins` with the user's words as `query` (for example `aon intelligence`).
+2. Call `find_logins` with the user's words as `query` (for example `acme corp`).
 3. Reply with the **exact** `name` values from `matches` (username, URI host, and folder are ok to show).
 4. **Stop.** Do not call `place_*`, `copy_to_clipboard`, or `pipe_to_command` unless the user asked to put the password somewhere.
 5. If `count` is 0, say no logins matched.
@@ -47,6 +47,8 @@ After placing, confirm using metadata only (path, key, login name). Never read t
 - Read destination files, `.env` (except `.example` / `.sample` / `.template`), or Cursor `terminals/` transcripts
 - Pass secret values as tool arguments
 - Run `bw get password`, `bw list items`, `bw export`, or any CLI that prints vault secrets
+- Read or pass `BW_SESSION`, query the OS keychain for it, or open `~/.cursor/secret-plugins/`
+- Work around a blocked command (quoting, variables, scripts, encoding). If a hook blocks you, use the plugin tools or ask the user
 - Write into git-tracked files
 - Type passwords with browser tools (use the clipboard)
 - Fetch a password just to "show the login"

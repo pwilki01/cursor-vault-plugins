@@ -15637,7 +15637,7 @@ var tools = [
   },
   {
     name: "find_logins",
-    description: "Search Bitwarden logins by name, username, URI host, and folder. Returns exact login names and metadata only \u2014 never passwords, TOTP, notes, or field values. Use for questions like 'are there logins related to aon intelligence'.",
+    description: "Search Bitwarden logins by name, username, URI host, and folder. Returns exact login names and metadata only \u2014 never passwords, TOTP, notes, or field values. Use for questions like 'are there logins related to acme corp'.",
     inputSchema: {
       type: "object",
       properties: {

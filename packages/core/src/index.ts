@@ -13,3 +13,4 @@ export * from "./config.ts";
 export * from "./registry.ts";
 export * from "./credentials.ts";
 export * from "./hook-io.ts";
+export * from "./command-guard.ts";
